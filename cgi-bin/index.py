@@ -8,6 +8,7 @@ import codecs
 from matplotlib.pyplot import subplots,xticks,savefig
 from matplotlib.ticker import MultipleLocator
 from time import strftime,time,localtime
+from os import remove
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
 position='start'
@@ -34,7 +35,7 @@ if action == "search":  # Получаем логин и пароль
     )
     res = response.json()
     try:
-        print(res['code'])
+        aa=res['code']
     except:
         total = res['total']
         n = ceil(total / 5000)
@@ -95,9 +96,9 @@ elif  action.isdigit():
         sales.append(sale)
         comments=res[i]['comments']
         #print(data,balance,final_price,sale,comments)
-        stroka = '<tr><th scope="row">' + str(i) + '</th><td scope="col">' + str(data) + '</th><td scope="col">' + str(balance) + '</th><td scope="col">' + str(final_price) + '</th><td scope="col">' + str(sale) + '</th><td scope="col">' + str(comments) + '</th></tr>'
+        stroka = '<tr><th scope="row">' + str(i+1) + '</th><td scope="col">' + str(data) + '</th><td scope="col">' + str(balance) + '</th><td scope="col">' + str(final_price) + '</th><td scope="col">' + str(sale) + '</th><td scope="col">' + str(comments) + '</th></tr>'
         all += stroka
-    print(all)
+    #print(all)
     sale=sales.reverse()
     mm=list(range(1,31))
     m=[]
@@ -111,7 +112,8 @@ elif  action.isdigit():
     ax.bar(mm,sales,color='#212529')
     ax.yaxis.set_major_locator(MultipleLocator(base=1))
     xticks(mm,m)
-    savefig('cgi-bin/graph.png')
+    remove('graph.png')
+    savefig('graph.png')
 pattern = '''
 <!DOCTYPE HTML>
 <html>
@@ -223,7 +225,7 @@ elif position=='item':
     </div>
     <div class="col-9">
     <div class="row">
-    <img src="graph.png">
+    <img src="http://127.0.0.1:8000/graph.png">
     </div>
     
     <div class="row">
