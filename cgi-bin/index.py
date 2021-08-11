@@ -5,21 +5,92 @@ import cgi
 import html
 import sys
 import codecs
-from matplotlib.pyplot import subplots,xticks,savefig
+import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from time import strftime,time,localtime
-from os import remove
+
+import sqlite3
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+sumstr = 500
+def add(a,b,c,d,e,f,j,k):
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO items VALUES (Null,'"+str(a)+"','"+str(b)+"','"+str(c).replace("'","")+"','"+str(d)+"','"+str(e)+"','"+str(f)+"','"+str(j)+"','"+str(k)+"')")
+    conn.commit()
+def clearr():
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM items")
+    conn.commit()
+def gett(s,e):
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM items WHERE di <= "+str(e)+" AND di >= "+str(s))
+    return cursor.fetchall()
+def result(total,p):
+    end=ceil(total/sumstr)
+    if p==end:
+        a=gett((p-1)*sumstr+1,total)
+    elif p==0:
+        a=[]
+    else:
+        a=gett((p-1)*sumstr+1,(p-1)*sumstr+sumstr)
+    res=''
+    for i in a:
+        stroka = '<tr><th scope="row">' + str(i[8]) + '</th><td scope="col">' + '<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + str(
+            i[1]) + '"><input class="btn btn-link-dark" type="submit" value="' + str(
+            i[1]) + '"></form>' + '</th><td scope="col"><img src="' + str(
+            i[2]) + '" class="img-thumbnail"></th><td scope="col">' + str(
+            i[3]) + '</th><td scope="col">' + str(i[4]) + '</th><td scope="col">' + str(
+            i[5]) + '</th><td scope="col">' + str(
+            i[6]) + '</th><td scope="col">' + str(i[7]) + '</th></tr>'
+        res += stroka
+    return res
+def buttons(total,p):
+    end = ceil(total / sumstr)
+    if p==0 or end==0:
+        a=[]
+    elif end<=11 and 0<end:
+        a=list(range(1,p))+[str(p)]+list(range(p+1,end+1))
+    else:
+        if end-p<5:
+            a=list(range(end-10, p)) + [str(p)] + list(range(p + 1, end+1))
+        elif p-1<5:
+            a=list(range(1, p)) + [str(p)] + list(range(p + 1, 12))
+        else:
+            a=list(range(p-5,p))+[str(p)]+list(range(p+1,p+6))
+    res=''
+    for i in a:
+        if str(type(i))[-5:-2]=='str':
+            res+='<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + 'a'+str(i) + '"><input class="btn" type="submit" value="'+ str(i) +'"></form>'
+        else:
+            res +='<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + 'a' + str(i) + '"><input class="btn btn-dark" type="submit" value="' + str(i) + '"></form>'
+    return res
+def tadd(total):
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sum SET sum = "+str(total)+" WHERE idx = 0")
+    conn.commit()
+def tget():
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT sum FROM sum WHERE idx = 0")
+    return int(cursor.fetchone()[0])
+
 
 position='start'
+p=0
+end=0
 
 form = cgi.FieldStorage()  # Получаем форму
 action = form.getfirst("action", "")  # Получаем поле action из формы
 all=''
 vyr=0
 prod=0
+butts=''
 
 if action == "search":  # Получаем логин и пароль
+    p=1
     search = form.getfirst("search", "")
     search = html.escape(search)
     d2 = strftime("%Y-%m-%d", localtime(time()))
@@ -34,14 +105,16 @@ if action == "search":  # Получаем логин и пароль
             'sortModel': []}
     )
     res = response.json()
-    try:
-        aa=res['code']
-    except:
+    if 'code' in res:
+        pass
+    else:
         total = res['total']
+        tadd(total)
         n = ceil(total / 5000)
 
         all = ''
         k = 1
+        clearr()
         for j in range(n):
             response = post(
                 'https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
@@ -57,13 +130,10 @@ if action == "search":  # Получаем логин и пароль
             for i in range(len(r)):
                 vyr+=int(r[i]['revenue'])
                 prod+=int(r[i]['sales'])
-                stroka = '<tr><th scope="row">' + str(k) + '</th><td scope="col">' + '<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + str(r[i]['id']) + '"><input class="btn btn-link-dark" type="submit" value="'+ str(r[i]['id']) +'"></form>' + '</th><td scope="col"><img src="' + str(
-                    r[i]['thumb']) + '" class="img-thumbnail"></th><td scope="col">' + str(
-                    r[i]['brand']) + '</th><td scope="col">' + str(r[i]['revenue']) + '</th><td scope="col">' + str(
-                    r[i]['lost_profit']) + '</th><td scope="col">' + str(
-                    r[i]['final_price']) + '</th><td scope="col">' + str(r[i]['sales']) + '</th></tr>'
-                all += stroka
+                add(r[i]['id'],r[i]['thumb'],r[i]['brand'],r[i]['revenue'],r[i]['lost_profit'],r[i]['final_price'],r[i]['sales'],k)
                 k += 1
+        all=result(total,p)
+        butts=buttons(total,p)
 elif  action.isdigit():
     position='item'
     d2 = strftime("%Y-%m-%d", localtime(time()))
@@ -107,13 +177,20 @@ elif  action.isdigit():
         m.append(str(localtime(t).tm_mday))
         t-=86400
     m=list(reversed(m))
-
-    fig, ax=subplots(figsize=(18, 11.7))
-    ax.bar(mm,sales,color='#212529')
+    fig, ax = plt.subplots(figsize=(18, 11.7))
+    ax.bar(mm, sales, color='#212529')
     ax.yaxis.set_major_locator(MultipleLocator(base=1))
-    xticks(mm,m)
-    remove('graph.png')
-    savefig('graph.png')
+    plt.xticks(mm, m)
+    plt.tight_layout()
+    plt.show()
+    plt.savefig('/home/ubuntu/www/media/images/fig.png')
+elif action!='' and action[0]=='a':
+    total=tget()
+    p=int(action[1:])
+    all = result(total, p)
+    butts = buttons(total, p)
+
+
 pattern = '''
 <!DOCTYPE HTML>
 <html>
@@ -178,7 +255,8 @@ if position=='start':
         </form>
         </div>
         <div class="col-9">
-
+        
+        <div class="row">
         <table class="table">
       <thead>
         <tr class="table-active">
@@ -206,6 +284,21 @@ if position=='start':
       ''' + all + '''
       </tbody>
     </table>
+    
+    </div>
+    
+    <div class="row">
+    <div class="btn-toolbar justify-content-center" role="toolbar" aria-label="Toolbar with button groups">
+
+  <div class="btn-group me-2" role="group" aria-label="Second group">
+'''+butts+'''
+    </div>
+  </div>
+  
+    </div>
+    </div>
+    
+    
         </div>
         </div>
         '''
@@ -225,7 +318,7 @@ elif position=='item':
     </div>
     <div class="col-9">
     <div class="row">
-    <img src="http://127.0.0.1:8000/graph.png">
+    <img src="http://87.247.157.127/images/fig.png">
     </div>
     
     <div class="row">
