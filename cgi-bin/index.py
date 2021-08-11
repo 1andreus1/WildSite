@@ -23,6 +23,36 @@ def tget():
     cursor = conn.cursor()
     cursor.execute("SELECT sum FROM sum WHERE idx = 0")
     return int(cursor.fetchone()[0])
+def sadd(search):
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sum SET sum = "+str(search)+" WHERE idx = 1")
+    conn.commit()
+def sget():
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT sum FROM sum WHERE idx = 1")
+    return int(cursor.fetchone()[0])
+def vadd(vyr):
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sum SET sum = "+str(vyr)+" WHERE idx = 2")
+    conn.commit()
+def vget():
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT sum FROM sum WHERE idx = 2")
+    return int(cursor.fetchone()[0])
+def padd(prod):
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sum SET sum = "+str(prod)+" WHERE idx = 3")
+    conn.commit()
+def pget():
+    conn = sqlite3.connect("mydb.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT sum FROM sum WHERE idx = 3")
+    return int(cursor.fetchone()[0])
 def result(total,p):
     end=ceil(total/sumstr)
     a=[]
@@ -101,7 +131,24 @@ if action == "search":  # Получаем логин и пароль
         pass
     else:
         total = res['total']
+        for j in range(ceil(total/5000)):
+            response = post(
+                'https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
+                headers={'X-Mpstats-TOKEN': '610a8de100ebf6.4662661992188d67d94d5b474ed6433a36ea4888'},
+                data={
+                    'startRow': str(1 + j * 5000),
+                    'endRow': str(5000 + j * 5000),
+                    'filterModel': {},
+                    'sortModel': []}
+            )
+            res = response.json()
+            r = res['data']
+            vyr += int(r['revenue'])
+            prod += int(r['sales'])
         tadd(total)
+        sadd(search)
+        vadd(vyr)
+        padd(prod)
         end = ceil(total / sumstr)
         print(total, end)
         all = result(total, p)
@@ -160,6 +207,9 @@ elif  action.isdigit():
     plt.savefig('/home/ubuntu/www/media/images/fig.png')
 elif action!='' and action[0]=='a':
     total=tget()
+    search=sget()
+    vyr=vadd()
+    prod=padd()
     p=int(action[1:])
     all = result(total, p)
     butts = buttons(total, p)
