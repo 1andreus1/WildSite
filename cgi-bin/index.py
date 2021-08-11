@@ -11,6 +11,8 @@ from time import strftime,time,localtime
 import sqlite3
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 sumstr = 10
+d2 = strftime("%Y-%m-%d", localtime(time()))
+d1 = strftime("%Y-%m-%d", localtime(time() - 2592000))
 def tadd(total):
     conn = sqlite3.connect("mydb.db")
     cursor = conn.cursor()
@@ -87,8 +89,6 @@ if action == "search":  # Получаем логин и пароль
     p=1
     search = form.getfirst("search", "")
     search = html.escape(search)
-    d2 = strftime("%Y-%m-%d", localtime(time()))
-    d1 = strftime("%Y-%m-%d", localtime(time() - 2592000))
     response = post('https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
                     headers={'X-Mpstats-TOKEN': '610a8de100ebf6.4662661992188d67d94d5b474ed6433a36ea4888'}, data={
             'startRow': '1',
