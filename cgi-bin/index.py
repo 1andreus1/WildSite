@@ -8,36 +8,42 @@ import codecs
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from time import strftime,time,localtime
-
 import sqlite3
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-sumstr = 500
-def add(a,b,c,d,e,f,j,k):
+sumstr = 10
+def tadd(total):
     conn = sqlite3.connect("mydb.db")
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO items VALUES (Null,'"+str(a)+"','"+str(b)+"','"+str(c).replace("'","")+"','"+str(d)+"','"+str(e)+"','"+str(f)+"','"+str(j)+"','"+str(k)+"')")
+    cursor.execute("UPDATE sum SET sum = "+str(total)+" WHERE idx = 0")
     conn.commit()
-def clearr():
+def tget():
     conn = sqlite3.connect("mydb.db")
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM items")
-    conn.commit()
-def gett(s,e):
-    conn = sqlite3.connect("mydb.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM items WHERE di <= "+str(e)+" AND di >= "+str(s))
-    return cursor.fetchall()
+    cursor.execute("SELECT sum FROM sum WHERE idx = 0")
+    return int(cursor.fetchone()[0])
 def result(total,p):
     end=ceil(total/sumstr)
-    if p==end:
-        a=gett((p-1)*sumstr+1,total)
-    elif p==0:
-        a=[]
+    a=[]
+    if p==0:
+        pass
     else:
-        a=gett((p-1)*sumstr+1,(p-1)*sumstr+sumstr)
+        print(1 + (p-1) * sumstr,sumstr + (p-1) * sumstr+1)
+        response = post(
+            'https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
+            headers={'X-Mpstats-TOKEN': '610a8de100ebf6.4662661992188d67d94d5b474ed6433a36ea4888'},
+            data={
+                'startRow': str(1 + (p-1) * sumstr),
+                'endRow': str(sumstr + (p-1) * sumstr+1),
+                'filterModel': {},
+                'sortModel': []})
+
+        res = response.json()
+        r = res['data']
+        for i in range(len(r)):
+            a.append([str(1 + (p-1) * sumstr + i), str(r[i]['id']), str(r[i]['thumb']), str(r[i]['brand']), str(r[i]['revenue']), str(r[i]['lost_profit']), str(r[i]['final_price']),str(r[i]['sales'])])
     res=''
     for i in a:
-        stroka = '<tr><th scope="row">' + str(i[8]) + '</th><td scope="col">' + '<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + str(
+        stroka = '<tr><th scope="row">' + str(i[0]) + '</th><td scope="col">' + '<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + str(
             i[1]) + '"><input class="btn btn-link-dark" type="submit" value="' + str(
             i[1]) + '"></form>' + '</th><td scope="col"><img src="' + str(
             i[2]) + '" class="img-thumbnail"></th><td scope="col">' + str(
@@ -66,18 +72,6 @@ def buttons(total,p):
         else:
             res +='<form action="/cgi-bin/index.py" method="post"><input type="hidden" name="action" value="' + 'a' + str(i) + '"><input class="btn btn-dark" type="submit" value="' + str(i) + '"></form>'
     return res
-def tadd(total):
-    conn = sqlite3.connect("mydb.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE sum SET sum = "+str(total)+" WHERE idx = 0")
-    conn.commit()
-def tget():
-    conn = sqlite3.connect("mydb.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT sum FROM sum WHERE idx = 0")
-    return int(cursor.fetchone()[0])
-
-
 position='start'
 p=0
 end=0
@@ -95,45 +89,25 @@ if action == "search":  # Получаем логин и пароль
     search = html.escape(search)
     d2 = strftime("%Y-%m-%d", localtime(time()))
     d1 = strftime("%Y-%m-%d", localtime(time() - 2592000))
-    response = post(
-        'https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
-        headers={'X-Mpstats-TOKEN': '610a8de100ebf6.4662661992188d67d94d5b474ed6433a36ea4888'},
-        data={
+    response = post('https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
+                    headers={'X-Mpstats-TOKEN': '610a8de100ebf6.4662661992188d67d94d5b474ed6433a36ea4888'}, data={
             'startRow': '1',
             'endRow': '2',
             'filterModel': {},
-            'sortModel': []}
-    )
+            'sortModel': []})
     res = response.json()
+
     if 'code' in res:
         pass
     else:
         total = res['total']
         tadd(total)
-        n = ceil(total / 5000)
+        end = ceil(total / sumstr)
+        print(total, end)
+        all = result(total, p)
+        butts = buttons(total, p)
 
-        all = ''
-        k = 1
-        clearr()
-        for j in range(n):
-            response = post(
-                'https://mpstats.io/api/wb/get/seller?d1=' + d1 + '&d2=' + d2 + '&path=' + search,
-                headers={'X-Mpstats-TOKEN': '610a8de100ebf6.4662661992188d67d94d5b474ed6433a36ea4888'},
-                data={
-                    'startRow': str(1 + j * 5000),
-                    'endRow': str(5000 + j * 5000),
-                    'filterModel': {},
-                    'sortModel': []}
-            )
-            res = response.json()
-            r = res['data']
-            for i in range(len(r)):
-                vyr+=int(r[i]['revenue'])
-                prod+=int(r[i]['sales'])
-                add(r[i]['id'],r[i]['thumb'],r[i]['brand'],r[i]['revenue'],r[i]['lost_profit'],r[i]['final_price'],r[i]['sales'],k)
-                k += 1
-        all=result(total,p)
-        butts=buttons(total,p)
+
 elif  action.isdigit():
     position='item'
     d2 = strftime("%Y-%m-%d", localtime(time()))
